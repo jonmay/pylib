@@ -29,9 +29,7 @@ def parse_feat_string(string):
   '''
   feats={}
   spos=0
-  keyre=re.compile(r"\s*(\S+)=")
-  valre=re.compile(r"((?:[^\s{}]+)|(?:{{{[^\}]+}}}))\s*")
-  entryre=re.compile(r"\s*(\S+)=((?:[^\s{}]+)|(?:{{{[^\}]+}}}))\s*")
+  entryre=re.compile(r"\s*(\S+)=((?:[^\s{}]+)|(?:{{{[^\}]*}}}))\s*")
   for match in entryre.findall(string):
     feats[match[0]]=match[1]
   return feats
