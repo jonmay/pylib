@@ -61,12 +61,31 @@ def parse_rule(string):
 def parse_rule_tree(string):
   '''
   given a paren-safe a(b c(d e)) tree, return a chiang tree
+  input can have "(" or ")" quoted lexical items but trickier stuff will bomb out
   '''
-  string=re.sub('\(', r' ( ', string).split(' ')
+  string = re.sub(r'"\("', r'"-LRBJM-"', string)
+  string = re.sub(r'"\)"', r'"-RRBJM-"', string)
+  string = re.sub('\(', r' ( ', string).split(' ')
+#  print string
   for idx, tok in enumerate(string):
     if tok == "(":
       string[idx-1], string[idx] = string[idx], string[idx-1]
-  return tree.str_to_tree(' '.join(string))
+#  print ' '.join(string)
+  ptree = tree.str_to_tree(' '.join(string))
+  for node in ptree.frontier():
+    if node.label == '"-LRBJM-"':
+      node.label = '"("'
+    if node.label == '"-RRBJM-"':
+      node.label = '")"'
+  return ptree
+
+def get_var_position(string):
+  '''
+  given a string that might contain a variable position (e.g. x0:NNP)
+  return the position as an integer, if it does, or None if it does not.
+  '''
+  match = re.match(r'x(\d+)', string)
+  return int(match.group(1)) if match is not None else None
 
 def target_order_map(string):
   '''
@@ -77,8 +96,80 @@ def target_order_map(string):
   ret={}
   nextidx=0
   for tok in string.split():
-    match = re.match(r'x(\d+)', tok)
-    if match is not None:
-      ret[nextidx]=int(match.group(1))
+    pos = get_var_position(tok)
+    if pos is not None:
+      ret[nextidx]=pos
       nextidx+=1
   return ret
+
+
+def clean_heads(tree):
+  if 'head' in tree.__dict__:
+    foo=tree.__dict__.pop('head')
+  newchildren=[]
+  for c in tree.children:
+    newchildren.append(clean_heads(c))
+  tree.children = newchildren
+  return tree
+
+
+def head_annotate_tree_from_rule(rule, local=True):
+  ''' assume headmarker and TARGET field. create a target tree and annotate with heads.
+      if local, local relative. if not, global to root relative '''
+  target = parse_rule_tree(rule['TARGET'].strip())
+  # head tree is compressed; open it up, but remove whitespace before open paren
+  head_tree_text = ' '.join(list(rule['headmarker'].strip('{}').strip()))
+  head_tree_text = re.sub(r' +\(', r'(', head_tree_text)
+  heads = parse_rule_tree(head_tree_text)
+  target = head_annotate_tree(heads, target, relative=None if local else target)
+  return target
+
+def head_annotate_tree(heads, target, relative=None):
+  '''
+  given a RHV head tree and a chiang tree that matches in form, set a boolean "head"
+  flag if a child is the head of its immediate parent. If relative is a node in target.
+  set the head flag if children are in the head *path* of the root
+  '''
+  target = clean_heads(target)
+  if heads.label != "R":
+    raise Exception("Expected root of heads tree to be 'R'")
+  if target.is_terminal() or target.is_preterminal():
+    # special case: single node. label head and return
+    target.head=True
+    if target.is_preterminal(): target.children[0].head=True
+    return target
+  if len(heads.children) != len(target.children):
+    raise Exception("Heads tree doesn't match target: "+str(heads)+" vs "+str(target))
+  newchildren = []
+  for (label, node) in zip(heads.children, target.children):
+    # if relative isn't here, no label of any kind
+    if relative is None or relative == target:
+      node.head = True if label.label == "H" else False
+#      print "Setting "+node.label+" to "+str(node.head)+" (top level)"
+    newchildren.append(head_annotate_tree_inner(label, node, relative))
+  target.children = newchildren
+  return target
+
+def head_annotate_tree_inner(heads, target, relative):
+  # if not relative, label children based on heads
+  # if relative, if parent is head or parent is relative, label children based on heads
+  #              if parent is not head, label all children not head
+  #              if parent is not labeled, no labels
+  if target.is_terminal() or target.is_preterminal():
+    if target.is_preterminal() and 'head' in target.__dict__:
+      target.children[0].head=target.head
+#    print "Short cut for pre/terminal target "+str(target)
+    return target
+  if len(heads.children) != len(target.children):
+    raise Exception("Heads tree doesn't match target: "+str(heads)+" vs "+str(target))
+  newchildren=[]
+  for (label, node) in zip(heads.children, target.children):
+    if relative is None or relative == target or ('head' in target.__dict__ and target.head):
+      node.head = True if label.label == "H" else False
+#      print "Setting "+node.label+" to "+str(node.head)
+    elif ('head' in target.__dict__ and not target.head):
+#      print "Setting "+node.label+" to False unilaterally"
+      node.head = False
+    newchildren.append(head_annotate_tree_inner(label, node, relative))
+  target.children=newchildren
+  return target

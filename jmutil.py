@@ -40,3 +40,8 @@ def isInt(string):
         return True
     except ValueError:
         return False
+
+def list_to_dict(l, tuple_size=2, key=0, val=1):
+    ''' given a list of items, form a dict out of it '''
+    # http://stackoverflow.com/questions/4576115/python-list-to-dictionary
+    return dict(zip(l[key::tuple_size], l[val::tuple_size]))

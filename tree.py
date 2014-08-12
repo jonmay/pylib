@@ -104,7 +104,7 @@ class Node:
         if len(self.children) > 1 or (len(self.children) == 1 and not self.children[0].is_terminal()):
             l = []
             for child in self.children:
-                l.extend(child.frontier())
+                l.extend(child.pret_frontier())
             return l
         else:
             return [self]
