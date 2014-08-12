@@ -87,6 +87,14 @@ def get_var_position(string):
   match = re.match(r'x(\d+)', string)
   return int(match.group(1)) if match is not None else None
 
+def get_var_label(string):
+  '''
+  given a string that might contain a variable position (e.g. x0:NNP)
+  return the label, if it has something, or None if it does not (e.g. x0:).
+  '''
+  match = re.match(r'x\d+:(\S+)', string)
+  return match.group(1) if match is not None else None
+
 def target_order_map(string):
   '''
   given a source string with variables contiguous from x0,
