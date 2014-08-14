@@ -38,8 +38,8 @@ class Node:
             return s
         else:
             s = self.label
-            s = s.replace("(", "-LRB-")
-            s = s.replace(")", "-RRB-")
+#            s = s.replace("(", "-LRB-")
+#            s = s.replace(")", "-RRB-")
             return s
 
     def is_terminal(self):
@@ -229,8 +229,8 @@ def scan_tree(tokens, pos):
             return (None, pos)
         else:
             label = tokens[pos]
-            label = label.replace("-LRB-", "(")
-            label = label.replace("-RRB-", ")")
+#            label = label.replace("-LRB-", "(")
+#            label = label.replace("-RRB-", ")")
             return (Node(label,[]), pos+1)
     except IndexError:
         return (None, pos)
