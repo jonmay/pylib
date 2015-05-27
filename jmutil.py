@@ -45,3 +45,14 @@ def list_to_dict(l, tuple_size=2, key=0, val=1):
     ''' given a list of items, form a dict out of it '''
     # http://stackoverflow.com/questions/4576115/python-list-to-dictionary
     return dict(zip(l[key::tuple_size], l[val::tuple_size]))
+
+def ngram(data, n, sep=' ', pref='START'):
+    ''' given a list of tokens, return a list of n-grams by joining with sep, prepending with pref '''
+    ret = []
+    # prefix spans
+    for i in range(1, min(n, len(data)+1)):
+        ret.append(sep.join([pref]*(n-i)+data[0:i]))
+    # regular spans
+    for i in range(max(len(data)-n+1, 0)):
+        ret.append(sep.join(data[i:i+n]))
+    return ret
