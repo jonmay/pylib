@@ -3,6 +3,8 @@
 import argparse
 import os
 import errno
+import shlex
+from subprocess import check_call, Popen, PIPE
 
 # general purpose utility functions
 
@@ -56,3 +58,27 @@ def ngram(data, n, sep=' ', pref='START'):
     for i in range(max(len(data)-n+1, 0)):
         ret.append(sep.join(data[i:i+n]))
     return ret
+
+def shchain(cmds, input=None, output=None):
+    ''' make and execute a Popen/check_call chain '''
+
+    # single element corner case
+    if len(cmds) == 1:
+        startargs={}
+        if input is not None:
+            startargs['stdin']=input
+        if output is not None:
+            startargs['stdout'] = output
+        check_call(shlex.split(cmds[0]), **startargs)
+        return
+    # normal cases
+    startargs={'stdout':PIPE}
+    if input is not None:
+        startargs['stdin']=input
+    lastcmd = Popen(shlex.split(cmds[0]), **startargs)
+    for cmd in cmds[1:-1]:
+        lastcmd = Popen(shlex.split(cmd), stdin=lastcmd.stdout, stdout=PIPE)
+    endargs = {'stdin':lastcmd.stdout}
+    if output is not None:
+        endargs['stdout'] = output
+    lastcmd = check_call(shlex.split(cmds[-1]), **endargs)
