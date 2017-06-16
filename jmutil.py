@@ -8,6 +8,17 @@ from subprocess import check_call, Popen, PIPE
 
 # general purpose utility functions
 
+# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+import os, errno
+def mkdir_p(path):
+  try:
+    os.makedirs(path)
+  except OSError as exc: # Python >2.5
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else: raise
+
+    
 # custom action to create new directory if default isn't used
 # http://stackoverflow.com/questions/11415570/directory-path-types-with-argparse
 
@@ -26,7 +37,7 @@ class make_passed_dir(argparse.Action):
 def get_stats(vec):
     import numpy
     retvec = (numpy.mean(vec), numpy.std(vec), min(vec), max(vec))
-    print "mean: %f stdev: %f range: %f-%f" % retvec
+    print("mean: %f stdev: %f range: %f-%f" % retvec)
     return retvec
 
 def isFloat(string):
